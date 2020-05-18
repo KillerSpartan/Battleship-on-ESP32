@@ -305,6 +305,31 @@ void posicionlast(char ascii){
 }
 
 
+//Frames para bombas
+
+void bombardeoP1(){
+  delay(1000);
+  lcd.setCursor(0,0);lcd.write(4);
+  lcd.setCursor(0,1);lcd.write(5);
+  for (int i = 1; i < 16; i++) {
+      lcd.setCursor(i, 0);
+      lcd.write(8);
+      lcd.setCursor(i, 1);
+      lcd.write(8);
+  }
+}
+
+void bombardeoP2(){
+  lcd.setCursor(0,0);lcd.write(4);
+  lcd.setCursor(0,1);lcd.write(5);
+  for (int i = 1; i < 16; i++) {
+      lcd.setCursor(i, 0);
+      lcd.write(8);
+      lcd.setCursor(i, 1);
+      lcd.write(8);
+  }
+}
+
 void setup(){
   lcd.init();
   lcd.backlight();
@@ -519,18 +544,57 @@ void loop(){
       Serial.println("  Barco Tres(P2)");
       delay(400);
 
+      sel=16;
+
       //sel = 16;
       break;
 
       case 16:
       lcd.clear();
       delay(500);
+      positionX=18; positionY=2;
       sel=17;
       break;
 
       case 17:
       lcd.setCursor(0,0);
-      lcd.print("El juego comienza");
+      lcd.blink();
+      lcd.print("Game Start");
+      delay(1000);
+      sel=18;
+      break;
+
+//·············Estos son los TURNOS de cada jugador················
+
+      //Player One Turno
+      case 18:
+      lcd.noBlink();
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Turno de P1");
+      delay(1000);
+      sel=19;
+      break;
+
+      case 19:
+        bombardeoP1();
+        delay(1000);
+        sel=20;
+      break;
+
+      //Player Two Turno
+      case 20:
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Turno de P2");
+      delay(1000);
+      sel=21;
+      break;
+
+      case 21:
+        bombardeoP2();
+        delay(2000);
+        sel=18;
       break;
 
 
@@ -540,7 +604,7 @@ void loop(){
 
 //·········Movimiento de barcos en la LCD········33
 
-if((numBP1>1)||(numBP2>1)){lcd.setCursor(positionX, positionY); lcd.write(3); delay(50);}
+if((numBP1>1 && numBP2<1) || (numBP1 >1 && numBP2>1)){lcd.setCursor(positionX, positionY); lcd.write(3); delay(50);}
 else{
   lcd.setCursor(positionX, positionY);
   lcd.write(2);
