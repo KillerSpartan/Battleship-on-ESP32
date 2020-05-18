@@ -97,7 +97,16 @@ LiquidCrystal_I2C lcd(0x3F, lcdColumns, lcdRows);
 
 //Variables Globales
 #define ADC 4
+#define LED 2
 #define buttonStart 5
+
+//Para el LED
+int brightness = 0;
+int fadeAmount = 5;
+
+const int freq=5000;
+const int ledChannel = 0;
+const int resolution = 10;
 
 
 int sel = 0;
@@ -124,16 +133,26 @@ int P1BarcoOne[]= {0, 0};
 int P1BarcoTwo[]= {0, 0};
 int P1BarcoTre[]= {0, 0};
 int P1Bomb[]={0, 0};
+char P1Name[10];
 
 //Player 2
 int P2BarcoOne[]= {0, 0};
 int P2BarcoTwo[]= {0, 0};
 int P2BarcoTre[]= {0, 0};
+char P2Name[10];
 
 int numBP1 = 0, numBP2 = 0; //Cantidad de Barcos
+int numBomb = 0; //Cantidad de cbombas
 char Position[14];
 char incomingByte;
 
+void PWMStart(){
+  pinMode(LED, OUTPUT);
+
+ledcSetup(ledChannel, freq, resolution);
+ledcAttachPin(LED, ledChannel);
+
+}
 
 bool areEqual(int arr1[], int arr2[])
 {
@@ -390,19 +409,49 @@ int bombardeoP1(char ascii){
   P1Bomb[0] = bombX;
   P1Bomb[1] = bombY;
 
-   if(areEqual(P1Bomb, P1BarcoOne)){
+   if(areEqual(P1Bomb, P2BarcoOne)){
      bombX = 18;   bombY=2;
      Serial.println("Yes");
      lcd.noBlink();
      delay(500);
      lcd.blink();
      delay(3000);
-     P1BarcoOne[0]=18; P1BarcoOne[1]=2;
-
+     numBP2--;
+     numBomb++;
+     P2BarcoOne[0]=18; P2BarcoOne[1]=2;
    }else{Serial.println("No le diste tronco");}
 
+   if(areEqual(P1Bomb, P2BarcoTwo)){
+     bombX = 18;   bombY=2;
+     Serial.println("Yes");
+     lcd.noBlink();
+     delay(500);
+     lcd.blink();
+     delay(3000);
+     numBP2--;
+     numBomb++;
+     P2BarcoTwo[0]=18; P2BarcoTwo[1]=2;
+   }else{Serial.println("No le diste tronco");}
+
+   if(areEqual(P1Bomb, P2BarcoTre)){
+     bombX = 18;   bombY=2;
+     Serial.println("¡¡Le has dado!! uWu");
+     lcd.noBlink();
+     delay(500);
+     lcd.blink();
+     delay(3000);
+     numBP2--;
+     numBomb++;
+     P2BarcoTre[0]=18; P2BarcoTre[1]=2;
+   }else{Serial.println("No le diste tronco");}
+
+
+if(numBP2 == 0 && numBomb == 3){
+  sel=30;
+}
+
 for (int i = 1; i < 16; i++) {
-if(i!=bombX && bombY!=!bombY){
+if(i!=bombX){
   lcd.setCursor(i, 0);
   lcd.write(8);
   lcd.setCursor(i, 1);
@@ -430,6 +479,7 @@ void setup(){
   creadorCustom();
   startScreen();
   Serial.begin(9600);
+  PWMStart();
 }
 
 void loop(){
@@ -685,25 +735,48 @@ void loop(){
         delay(10);
       }
 
+      if(numBP2 > 2){Value = 1024;}
+      if(numBP2 == 2){Value = 500;}
+      if(numBP2 == 1){Value = 250;}
+      if(numBP2 < 1){Value = 0;}
+      ledcWrite(ledChannel, Value);
+
       break;
 
 
 
-      //Player Two Turno
-      //~ case 20:
-      //~ lcd.clear();
-      //~ lcd.setCursor(0, 0);
-      //~ lcd.print("Turno de P2");
-      //~ Serial.println("Es turno de P2");
-      //~ delay(1000);
-      //~ sel=21;
-      //~ break;
+      //~ //Player Two Turno
+      case 20:
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Turno de P2");
+      Serial.println("Es turno de P2");
+      delay(1000);
+      sel=21;
+      break;
 
-      //~ case 21:
-        //~ bombardeoP2();
-        //~ delay(2000);
-        //~ sel=18;
-      //~ break;
+      case 21:
+        bombardeoP2();
+        delay(2000);
+        sel=18;
+      break;
+
+
+      ///*****GAME OVER////
+
+      case 30:
+      lcd.clear();
+      delay(1000);
+      sel = 31;
+      break;
+
+      case 31:
+      lcd.setCursor(0, 0);
+      lcd.print("Game Over");
+      lcd.setCursor(0, 1);
+      lcd.print("P1 Wins");
+      Serial.println("El jugador P1 ganó");
+
 
 
 }
