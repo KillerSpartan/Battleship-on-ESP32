@@ -3,6 +3,10 @@
 #include "stdlib.h"
 #include "stdio.h"
 #include "LiquidCrystal_I2C.h"
+#include <bits.h>
+#include <iostream>
+#include <algorithm>
+
 
 //Todos los caracteres customizados
 byte frame[] = {
@@ -65,14 +69,14 @@ byte front_BarcoHorizontal[] = {
   B11100,
   B00000}; //2
 byte bFont[] = {
-  B11110,
-  B11001,
-  B01001,
-  B11111,
-  B11001,
-  B01001,
-  B11001,
-  B11110
+  B01110,
+  B10001,
+  B11011,
+  B10001,
+  B01010,
+  B01110,
+  B01110,
+  B00000
 };
 byte null[] = {
   B00000,
@@ -101,6 +105,10 @@ int Value = 0;
 int positionY = 0;
 int positionX = 2;
 
+//bombas
+int bombX = 18, bombY=2;
+
+
 //Barcos for Player 1
 int oneX = 18, oneY = 2;
 int twoX = 18, twoY=2;
@@ -115,6 +123,7 @@ int p2_threeX = 18, p2_threeY = 2;
 int P1BarcoOne[]= {0, 0};
 int P1BarcoTwo[]= {0, 0};
 int P1BarcoTre[]= {0, 0};
+int P1Bomb[]={0, 0};
 
 //Player 2
 int P2BarcoOne[]= {0, 0};
@@ -124,6 +133,20 @@ int P2BarcoTre[]= {0, 0};
 int numBP1 = 0, numBP2 = 0; //Cantidad de Barcos
 char Position[14];
 char incomingByte;
+
+
+bool areEqual(int arr1[], int arr2[])
+{
+
+    // Linearly compare elements
+    for (int i = 0; i < 2; i++)
+        if (arr1[i] != arr2[i])
+            return false;
+
+    // If all elements were same.
+    return true;
+}
+
 
 void creadorCustom(){
   lcd.createChar(1, back_BarcoHorizontal);
@@ -242,8 +265,7 @@ int P2ForGame(int x, int y, int size){
     }
   }
   delay(50);
-  return 0;
-} //Esta es la pantalla para P2
+  return 0;} //Esta es la pantalla para P2
 void posicionamiento(char ascii){
 
   switch (ascii) {
@@ -265,7 +287,7 @@ void posicionamiento(char ascii){
   }
 
   if(positionX<1){positionX = 1;}
-  if(positionX > 15){positionX = 15;}
+  if(positionX>15){positionX = 15;}
   if(positionY>1){positionY=1;}
   if(positionY<0){positionY=0;}
 
@@ -304,19 +326,91 @@ void posicionlast(char ascii){
   delay(50);
 }
 
-
 //Frames para bombas
-
-void bombardeoP1(){
+int bombardeoP1(char ascii){
   delay(1000);
   lcd.setCursor(0,0);lcd.write(4);
   lcd.setCursor(0,1);lcd.write(5);
-  for (int i = 1; i < 16; i++) {
-      lcd.setCursor(i, 0);
-      lcd.write(8);
-      lcd.setCursor(i, 1);
-      lcd.write(8);
+
+  switch (ascii) {
+    case 'a':
+    bombY = 0;
+    break;
+
+    case 'b':
+    bombY = 1;
+    break;
+
+    case '1':
+    bombX = 1;
+    break;
+
+    case '2':
+    bombX = 2;
+    break;
+
+    case '3':
+    bombX = 3;
+    break;
+
+    case '4':
+    bombX = 4;
+    break;
+
+    case '5':
+    bombX = 5;
+    break;
+
+    case '6':
+    bombX = 6;
+    break;
+
+    case '7':
+    bombX = 7;
+    break;
+
+    case '8':
+    bombX = 8;
+    break;
+
+    case '9':
+    bombX = 9;
+    break;
+
+    case '0':
+    bombX = 10;
+    break;
+
+
   }
+
+  lcd.setCursor(bombX, bombY);
+  lcd.write(6);
+
+  P1Bomb[0] = bombX;
+  P1Bomb[1] = bombY;
+
+   if(areEqual(P1Bomb, P1BarcoOne)){
+     bombX = 18;   bombY=2;
+     Serial.println("Yes");
+     lcd.noBlink();
+     delay(500);
+     lcd.blink();
+     delay(3000);
+     P1BarcoOne[0]=18; P1BarcoOne[1]=2;
+
+   }else{Serial.println("No le diste tronco");}
+
+for (int i = 1; i < 16; i++) {
+if(i!=bombX && bombY!=!bombY){
+  lcd.setCursor(i, 0);
+  lcd.write(8);
+  lcd.setCursor(i, 1);
+  lcd.write(8);
+}
+
+  }
+  return 0;
 }
 
 void bombardeoP2(){
@@ -363,6 +457,7 @@ void loop(){
         numBP1++;
         sel = 3;
       break;
+
       case 3:
       frameForGame(twoX,twoY, 0);
       if (Serial.available() > 0) {
@@ -405,6 +500,8 @@ void loop(){
         P1BarcoTre[0]=threeX; P1BarcoTre[1] = threeY;
 
         lcd.clear();
+        positionX = 18;
+        positionY=2;
 
         Serial.print(P1BarcoOne[0]);
         Serial.print(",");
@@ -572,30 +669,41 @@ void loop(){
       lcd.clear();
       lcd.setCursor(0, 0);
       lcd.print("Turno de P1");
+      Serial.println("Es turno de P1");
       delay(1000);
       sel=19;
       break;
 
       case 19:
-        bombardeoP1();
-        delay(1000);
-        sel=20;
+
+      bombardeoP1(incomingByte);
+
+      if (Serial.available() > 0) {
+        incomingByte = Serial.read();
+        Serial.print("I received: ");
+        Serial.println(incomingByte, DEC);
+        delay(10);
+      }
+
       break;
+
+
 
       //Player Two Turno
-      case 20:
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print("Turno de P2");
-      delay(1000);
-      sel=21;
-      break;
+      //~ case 20:
+      //~ lcd.clear();
+      //~ lcd.setCursor(0, 0);
+      //~ lcd.print("Turno de P2");
+      //~ Serial.println("Es turno de P2");
+      //~ delay(1000);
+      //~ sel=21;
+      //~ break;
 
-      case 21:
-        bombardeoP2();
-        delay(2000);
-        sel=18;
-      break;
+      //~ case 21:
+        //~ bombardeoP2();
+        //~ delay(2000);
+        //~ sel=18;
+      //~ break;
 
 
 }
