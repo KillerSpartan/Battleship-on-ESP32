@@ -7,6 +7,20 @@
 #include <iostream>
 #include <algorithm>
 
+#include <WiFi.h>
+#include <PubSubClient.h>
+
+const char* ssid     = "INFINITUM41f3";
+const char* password = "3566343631";
+
+const char* brokerUser = "waxenbrute@gmail.com";
+const char* brokerPass   = "7a811dc7";
+const char* broker = "mqtt.dioty.co";
+const char* outTopic = "/waxenbrute@gmail.com/out";
+const char* inTopic = "/waxenbrute@gmail.com/in";
+
+WiFiClient espClient;
+PubSubClient client(espClient);
 
 //Todos los caracteres customizados
 byte frame[] = {
@@ -89,6 +103,23 @@ byte null[] = {
   B00000
 };
 
+//Fucionaes para Internet
+void reconnect(){
+  while(!client.connected()) {
+    Serial.print("\n Conectado a");
+    Serial.println(broker);
+    if(client.connect("WaxenBrute", brokerUser,brokerPass)){
+      Serial.print("\n Conectado a ");
+      Serial.println(broker);
+      client.subscribe(inTopic);
+
+    }else{
+      Serial.println("Intentando reconexión");
+      delay(5000);
+    }
+  }
+}
+
 
 //Configuracion de LCD
 int lcdColumns = 16;
@@ -103,6 +134,7 @@ LiquidCrystal_I2C lcd(0x3F, lcdColumns, lcdRows);
 //Para el LED
 int brightness = 0;
 int fadeAmount = 5;
+int flag = 0;
 
 const int freq=5000;
 const int ledChannel = 0;
@@ -113,6 +145,7 @@ int sel = 0;
 int Value = 0;
 int positionY = 0;
 int positionX = 2;
+int aux = 0;
 
 //bombas
 int bombX = 18, bombY=2;
@@ -185,6 +218,30 @@ void startScreen(){
   lcd.setCursor(0,1);
   lcd.print("Press = to start");
 
+}
+int playerNames(char asci, int n){
+
+  switch(n){
+    case 1:
+
+      lcd.setCursor(aux,1);
+      lcd.write(asci);
+      P1Name[aux] = asci;
+      aux++;
+      if(asci==13){sel=32;}
+
+
+    break;
+
+    case 2:
+    lcd.setCursor(aux,1);
+    lcd.write(asci);
+    P2Name[aux] = asci;
+    aux++;
+    if(asci==13){sel=2;}
+    break;
+  }
+      return 0;
 }
 
 int frameForGame(int x, int y, int size){
@@ -487,8 +544,27 @@ void loop(){
   delay(10);
   if(digitalRead(buttonStart)==HIGH){delay(30);sel++;}
     switch (sel) {
-      case 1:
 
+      case 1:
+      flag++;
+      if(flag==1){lcd.clear(); delay(500);}
+      else{
+        lcd.setCursor(5,0);
+        lcd.print("Player 1:");
+
+        if(Serial.available() > 0) {
+        incomingByte = Serial.read();
+         Serial.print("I received: ");
+         Serial.println(incomingByte);
+         playerNames(incomingByte,1);
+         delay(10);
+      }
+
+      }
+
+      break;
+
+      case 2:
         frameForGame(oneX,oneY, 0);
         if (Serial.available() > 0) {
           incomingByte = Serial.read();
@@ -496,19 +572,21 @@ void loop(){
           // say what you got:
          Serial.print("I received: ");
          Serial.println(incomingByte, DEC);
+         Serial.println(P1Name);
          delay(10);
         }
 
+
       break;
-      case 2:
+      case 3:
         oneX = positionX;
         oneY = positionY;
         frameForGame(oneX,oneY, 0);
         numBP1++;
-        sel = 3;
+        sel = 4;
       break;
 
-      case 3:
+      case 4:
       frameForGame(twoX,twoY, 0);
       if (Serial.available() > 0) {
         incomingByte = Serial.read();
@@ -519,14 +597,15 @@ void loop(){
        delay(10);
      }
         break;
-      case 4:
+      case 5:
         twoX = positionX;
         twoY = positionY;
         frameForGame(twoX,twoY, 0);
         numBP1++;
-        sel = 5;
+        sel = 6;
         break;
-      case 5:
+
+      case 6:
       frameForGame(threeX,threeY, 1);
       if (Serial.available() > 0) {
         incomingByte = Serial.read();
@@ -537,13 +616,14 @@ void loop(){
        delay(10);
       }
       break;
-      case 6:
+      case 7:
         threeX = positionX;
         threeY = positionY;
         frameForGame(threeX,threeY, 1);
-        sel=7;
+        sel=8;
       break;
-      case 7:
+
+      case 8:
 
         P1BarcoOne[0]=oneX; P1BarcoOne[1] = oneY;
         P1BarcoTwo[0]=twoX; P1BarcoTwo[1] = twoY;
@@ -571,10 +651,10 @@ void loop(){
         Serial.println("  Barco Tres");
         delay(400);
 
-        sel = 8;
+        sel = 9;
         break;
 //·················Cambio de Turno···························
-      case 8:
+      case 9:
       delay(2000);
       positionX=2;
       positionY=0;
@@ -583,10 +663,10 @@ void loop(){
       lcd.setCursor(0, 1);
       lcd.print("Preparate dude");
       delay(1000);
-      sel = 9;
+      sel = 10;
       break;
 
-      case 9:
+      case 10:
 
         P2ForGame(p2_oneX,p2_oneY, 0);
         if (Serial.available() > 0) {
@@ -598,16 +678,15 @@ void loop(){
           delay(10);
         }
       break;
-
-      case 10:
+      case 11:
       p2_oneX = positionX;
       p2_oneY = positionY;
       P2ForGame(p2_oneX,p2_oneY, 0);
       numBP2++;
-      sel = 11;
+      sel = 12;
       break;
 
-      case 11:
+      case 12:
       P2ForGame(p2_twoX,p2_twoY, 0);
       if (Serial.available() > 0) {
         incomingByte = Serial.read();
@@ -617,16 +696,15 @@ void loop(){
        Serial.println(incomingByte, DEC);
        delay(10);}
       break;
-
-      case 12:
+      case 13:
       p2_twoX = positionX;
       p2_twoY = positionY;
       P2ForGame(p2_twoX,p2_twoY, 0);
       numBP2++;
-      sel = 13;
+      sel = 14;
       break;
 
-      case 13:
+      case 14:
       P2ForGame(p2_threeX,p2_threeY, 1);
       if (Serial.available() > 0) {
         incomingByte = Serial.read();
@@ -638,15 +716,15 @@ void loop(){
       }
       break;
 
-      case 14:
+      case 15:
       p2_threeX = positionX;
       p2_threeY = positionY;
       P2ForGame(p2_threeX,p2_threeY, 1);
       numBP2++;
-      sel=15;
+      sel=16;
       break;
 
-      case 15:
+      case 16:
       P2BarcoOne[0]=p2_oneX; P2BarcoOne[1] = p2_oneY;
       P2BarcoTwo[0]=p2_twoX; P2BarcoTwo[1] = p2_twoY;
       P2BarcoTre[0]=p2_threeX; P2BarcoTre[1] = p2_threeY;
@@ -691,40 +769,40 @@ void loop(){
       Serial.println("  Barco Tres(P2)");
       delay(400);
 
-      sel=16;
+      sel=17;
 
       //sel = 16;
       break;
 
-      case 16:
+      case 17:
       lcd.clear();
       delay(500);
       positionX=18; positionY=2;
-      sel=17;
+      sel=18;
       break;
 
-      case 17:
+      case 18:
       lcd.setCursor(0,0);
       lcd.blink();
       lcd.print("Game Start");
       delay(1000);
-      sel=18;
+      sel=19;
       break;
 
 //·············Estos son los TURNOS de cada jugador················
 
       //Player One Turno
-      case 18:
+      case 19:
       lcd.noBlink();
       lcd.clear();
       lcd.setCursor(0, 0);
       lcd.print("Turno de P1");
       Serial.println("Es turno de P1");
       delay(1000);
-      sel=19;
+      sel=20;
       break;
 
-      case 19:
+      case 20:
 
       bombardeoP1(incomingByte);
 
@@ -732,6 +810,7 @@ void loop(){
         incomingByte = Serial.read();
         Serial.print("I received: ");
         Serial.println(incomingByte, DEC);
+        Serial.println(P2Name);
         delay(10);
       }
 
@@ -746,19 +825,17 @@ void loop(){
 
 
       //~ //Player Two Turno
-      case 20:
+      case 21:
       lcd.clear();
       lcd.setCursor(0, 0);
       lcd.print("Turno de P2");
       Serial.println("Es turno de P2");
       delay(1000);
-      sel=21;
+      sel=22;
       break;
-
-      case 21:
+      case 22:
         bombardeoP2();
         delay(2000);
-        sel=18;
       break;
 
 
@@ -774,14 +851,51 @@ void loop(){
       lcd.setCursor(0, 0);
       lcd.print("Game Over");
       lcd.setCursor(0, 1);
-      lcd.print("P1 Wins");
-      Serial.println("El jugador P1 ganó");
+      lcd.print(P1Name);
+      lcd.print("Wins");
+      Serial.println(P1Name);
+      Serial.print(" Wins");
+      delay(5000);
+      sel=40;
+      break;
+
+      case 32:
+      lcd.clear();
+      delay(500);
+      sel=33;
+      break;
+
+      //Player 2
+
+      case 33:
+      lcd.setCursor(5,0);
+      lcd.print("Player 2:");
+
+      if(Serial.available() > 0) {
+      incomingByte = Serial.read();
+       Serial.print("I received: ");
+       Serial.println(incomingByte);
+       playerNames(incomingByte,2);
+       delay(10);
+      }
+
+      break;
 
 
+      case 40:
+      lcd.clear();
+      sel = 41;
+      break;
 
+      case 41:
+      lcd.setCursor(5, 1);
+      lcd.print("Again?");
+      lcd.blink_on();
+      delay(1000);
+      lcd.blink_off();
+      delay(1000);
+      break;
 }
-
-
 
 //·········Movimiento de barcos en la LCD········33
 
@@ -795,19 +909,15 @@ else{
 }
 
 
-
-delay(100);
-
-
-
-    //Barco Uno
-
-
-
+//Start
     //~ case 3 ... 7: // Si alcanza cierto punto se reinicia el programa
       //~ loop();
       //~ sel=0;
     //~ break;
+
+
+    delay(100);
+
 
 
 }
