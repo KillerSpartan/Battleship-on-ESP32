@@ -17,10 +17,19 @@ const char* brokerUser = "waxenbrute@gmail.com";
 const char* brokerPass   = "7a811dc7";
 const char* broker = "mqtt.dioty.co";
 const char* outTopic = "/waxenbrute@gmail.com/out";
+const char* outTopicP2 = "/waxenbrute@gmail.com/outP2";
+const char* outTopicBarcos = "/waxenbrute@gmail.com/outBarcos";
+const char* outTopicBarcoP2 = "/waxenbrute@gmail.com/outVersus";
 const char* inTopic = "/waxenbrute@gmail.com/in";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
+
+long currentTime, lastTime;
+long count = 0;
+char messages[50];
+char barcos[50];
+char barcosP2[50];
 
 //Todos los caracteres customizados
 byte frame[] = {
@@ -103,6 +112,8 @@ byte null[] = {
   B00000
 };
 
+char MQTTCommX, MQTTCommY;
+
 //Fucionaes para Internet
 void reconnect(){
   while(!client.connected()) {
@@ -118,6 +129,40 @@ void reconnect(){
       delay(5000);
     }
   }
+}
+
+void setupWifi(){
+  delay(10);
+  Serial.println();
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+      delay(500);
+      Serial.print(".");
+  }
+
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+}
+
+void callback(char* topic, byte* payload, unsigned int length){
+  Serial.print("Estatus de Alarma: ");
+  Serial.println(topic);
+  for(int i=0; i<length; i++){
+    MQTTCommY = payload[0];
+    MQTTCommX = payload[1];
+    Serial.print(MQTTCommX);
+    Serial.print(MQTTCommY);
+
+    Serial.print((char) payload[i]);
+  }
+Serial.println();
 }
 
 
@@ -403,19 +448,22 @@ void posicionlast(char ascii){
 }
 
 //Frames para bombas
-int bombardeoP1(char ascii){
+int bombardeoP1(char ascii, char xCom){
   delay(1000);
   lcd.setCursor(0,0);lcd.write(4);
   lcd.setCursor(0,1);lcd.write(5);
 
-  switch (ascii) {
-    case 'a':
+  switch(xCom){
+    case 'A':
     bombY = 0;
     break;
 
-    case 'b':
+    case 'B':
     bombY = 1;
     break;
+  }
+
+  switch (ascii) {
 
     case '1':
     bombX = 1;
@@ -535,11 +583,38 @@ void setup(){
   lcd.backlight();
   creadorCustom();
   startScreen();
+  setupWifi();
+client.setServer(broker, 1883);
+client.setCallback(callback);
   Serial.begin(9600);
   PWMStart();
 }
 
 void loop(){
+
+  if(!client.connected()){
+  reconnect();
+}
+client.loop();
+
+sprintf(barcos, "%d", numBP1);
+sprintf(barcosP2, "%d", numBP2);
+
+
+currentTime = millis();
+  if(currentTime-lastTime > 2000){
+    count++;
+    //snprintf(messages, 75, "Count: %ld", count);
+    String Player = "P1";
+    Serial.print("Sending ");
+    Serial.println(messages);
+    client.publish(outTopic, P1Name);
+    client.publish(outTopicBarcos, barcos);
+    client.publish(outTopicBarcoP2, barcosP2);
+    client.publish(outTopicP2, P2Name);
+
+    lastTime = millis();
+  }
 
   delay(10);
   if(digitalRead(buttonStart)==HIGH){delay(30);sel++;}
@@ -619,6 +694,7 @@ void loop(){
       case 7:
         threeX = positionX;
         threeY = positionY;
+        numBP1++;
         frameForGame(threeX,threeY, 1);
         sel=8;
       break;
@@ -804,7 +880,7 @@ void loop(){
 
       case 20:
 
-      bombardeoP1(incomingByte);
+      bombardeoP1(MQTTCommX, MQTTCommY);
 
       if (Serial.available() > 0) {
         incomingByte = Serial.read();
